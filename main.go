@@ -104,9 +104,24 @@ func MainAction(c *cli.Context) {
 
 	// build right now
 	build(builder, logger)
-
+	
+	//Monitored Files
+	fileTypes := map[string]struct{}{
+		".go":struct{}{},
+		".html":struct{}{},
+		".tmpl":struct{}{},
+		".json":struct{}{},
+		".js":struct{}{},
+		".css":struct{}{},
+		".less":struct{}{},
+		".jpg":struct{}{},
+		".png":struct{}{},
+		".gif":struct{}{},
+	}
+	
+	
 	// scan for changes
-	scanChanges(c.GlobalString("path"), func(path string) {
+	scanChanges(fileTypes, c.GlobalString("path"), func(path string) {
 		runner.Kill()
 		build(builder, logger)
 	})
@@ -144,7 +159,7 @@ func build(builder gin.Builder, logger *log.Logger) {
 
 type scanCallback func(path string)
 
-func scanChanges(watchPath string, cb scanCallback) {
+func scanChanges(fileTypes map[string]struct{},watchPath string, cb scanCallback) {
 	for {
 		filepath.Walk(watchPath, func(path string, info os.FileInfo, err error) error {
 			if path == ".git" {
@@ -155,13 +170,12 @@ func scanChanges(watchPath string, cb scanCallback) {
 			if filepath.Base(path)[0] == '.' {
 				return nil
 			}
-
-			if filepath.Ext(path) == ".go" || filepath.Ext(path) == ".html" || filepath.Ext(path) == ".tmpl" && info.ModTime().After(startTime) {
+			
+			if _, ok:=fileTypes[filepath.Ext(path)]; ok && info.ModTime().After(startTime) {
 				cb(path)
 				startTime = time.Now()
 				return errors.New("done")
 			}
-
 			return nil
 		})
 		time.Sleep(500 * time.Millisecond)
