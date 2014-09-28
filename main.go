@@ -54,7 +54,7 @@ func main() {
 		{
 			Name:      "run",
 			ShortName: "r",
-			Usage:     "Run the gin proxy in the current working directory",
+			Usage:     "Run the gin proxy in the current working directory.",
 			Action:    MainAction,
 		},
 		{
