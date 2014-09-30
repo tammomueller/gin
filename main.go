@@ -54,7 +54,7 @@ func main() {
 		{
 			Name:      "run",
 			ShortName: "r",
-			Usage:     "Run the gin proxy in the current working directory.",
+			Usage:     "Run the gin proxy in the current working directory",
 			Action:    MainAction,
 		},
 		{
@@ -89,42 +89,27 @@ func MainAction(c *cli.Context) {
 	proxy := gin.NewProxy(builder, runner)
 
 	config := &gin.Config{
-		Port:    port,
-		ProxyTo: "http://localhost:" + appPort,
-	}
+Port:    port,
+ProxyTo: "http://localhost:" + appPort,
+}
 
-	err = proxy.Run(config)
-	if err != nil {
-		logger.Fatal(err)
-	}
+err = proxy.Run(config)
+if err != nil {
+logger.Fatal(err)
+}
 
-	logger.Printf("listening on port %d\n", port)
+logger.Printf("listening on port %d\n", port)
 
-	shutdown(runner)
+shutdown(runner)
 
-	// build right now
+// build right now
+build(builder, logger)
+
+// scan for changes
+scanChanges(c.GlobalString("path"), func(path string) {
+	runner.Kill()
 	build(builder, logger)
-	
-	//Monitored Files
-	fileTypes := map[string]struct{}{
-		".go":struct{}{},
-		".html":struct{}{},
-		".tmpl":struct{}{},
-		".json":struct{}{},
-		".js":struct{}{},
-		".css":struct{}{},
-		".less":struct{}{},
-		".jpg":struct{}{},
-		".png":struct{}{},
-		".gif":struct{}{},
-	}
-	
-	
-	// scan for changes
-	scanChanges(fileTypes, c.GlobalString("path"), func(path string) {
-		runner.Kill()
-		build(builder, logger)
-	})
+})
 }
 
 func EnvAction(c *cli.Context) {
@@ -159,25 +144,26 @@ func build(builder gin.Builder, logger *log.Logger) {
 
 type scanCallback func(path string)
 
-func scanChanges(fileTypes map[string]struct{},watchPath string, cb scanCallback) {
+func scanChanges(watchPath string, cb scanCallback) {
 	for {
 		filepath.Walk(watchPath, func(path string, info os.FileInfo, err error) error {
-			if path == ".git" {
-				return filepath.SkipDir
-			}
+				if path == ".git" {
+					return filepath.SkipDir
+				}
 
-			// ignore hidden files
-			if filepath.Base(path)[0] == '.' {
+				// ignore hidden files
+				if filepath.Base(path)[0] == '.' {
+					return nil
+				}
+
+				if filepath.Ext(path) == ".go" && info.ModTime().After(startTime) {
+					cb(path)
+					startTime = time.Now()
+					return errors.New("done")
+				}
+
 				return nil
-			}
-			
-			if _, ok:=fileTypes[filepath.Ext(path)]; ok && info.ModTime().After(startTime) {
-				cb(path)
-				startTime = time.Now()
-				return errors.New("done")
-			}
-			return nil
-		})
+			})
 		time.Sleep(500 * time.Millisecond)
 	}
 }
